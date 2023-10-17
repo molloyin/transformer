@@ -1,3 +1,8 @@
+"""
+Author:         Matthew Molloy
+Date:           13/10/2023
+Description:    Endoder/Decoder transformer model for next-in-sequence text generation. For AI class project.
+"""
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -13,11 +18,13 @@ class MultiHeadAttention(nn.Module):
         self.num_heads = num_heads
         self.d_k = d_model // num_heads
         
+        # Linear transformations for query, key, value, and output
         self.W_q = nn.Linear(d_model, d_model)
         self.W_k = nn.Linear(d_model, d_model)
         self.W_v = nn.Linear(d_model, d_model)
         self.W_o = nn.Linear(d_model, d_model)
         
+    # Scaled dot-product attention mechanism
     def scaled_dot_product_attention(self, Q, K, V, mask=None):
         attn_scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(self.d_k)
         if mask is not None:
@@ -26,14 +33,17 @@ class MultiHeadAttention(nn.Module):
         output = torch.matmul(attn_probs, V)
         return output
         
+    # Split and reshape input into multiple heads
     def split_heads(self, x):
         batch_size, seq_length, d_model = x.size()
         return x.view(batch_size, seq_length, self.num_heads, self.d_k).transpose(1, 2)
         
+    # Combine heads and reshape back to original shape
     def combine_heads(self, x):
         batch_size, _, seq_length, d_k = x.size()
         return x.transpose(1, 2).contiguous().view(batch_size, seq_length, self.d_model)
         
+    # Forward pass of Multi-Head Attention
     def forward(self, Q, K, V, mask=None):
         Q = self.split_heads(self.W_q(Q))
         K = self.split_heads(self.W_k(K))
@@ -57,6 +67,7 @@ class PositionalEncoding(nn.Module):
     def __init__(self, d_model, max_seq_length):
         super(PositionalEncoding, self).__init__()
         
+        # Calculate positional encodings using sine and cosine functions
         pe = torch.zeros(max_seq_length, d_model)
         position = torch.arange(0, max_seq_length, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model))
@@ -108,14 +119,22 @@ class DecoderLayer(nn.Module):
 class Transformer(nn.Module):
     def __init__(self, src_vocab_size, tgt_vocab_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout):
         super(Transformer, self).__init__()
+        
+        # Embedding layers for source and target sequences
         self.encoder_embedding = nn.Embedding(src_vocab_size, d_model)
         self.decoder_embedding = nn.Embedding(tgt_vocab_size, d_model)
+
+        # Positional Encoding
         self.positional_encoding = PositionalEncoding(d_model, max_seq_length)
 
+        # Stacked Encoder and Decoder Layers
         self.encoder_layers = nn.ModuleList([EncoderLayer(d_model, num_heads, d_ff, dropout) for _ in range(num_layers)])
         self.decoder_layers = nn.ModuleList([DecoderLayer(d_model, num_heads, d_ff, dropout) for _ in range(num_layers)])
 
+        # Linear layer for output projection
         self.fc = nn.Linear(d_model, tgt_vocab_size)
+
+        # Dropout layer
         self.dropout = nn.Dropout(dropout)
 
     def generate_mask(self, src, tgt):
