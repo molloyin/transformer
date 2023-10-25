@@ -1,2 +1,0 @@
-- training data and target data are still just random integers, no meaningful attention will be learned
-- no way to evaluate model yet, need to implement input_text -> tokenization functionality
